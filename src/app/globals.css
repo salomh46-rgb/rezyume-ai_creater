@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f4f2ec;
+  --surface: #fbfaf7;
+  --surface-2: #ece9e1;
+  --ink: #20242a;
+  --ink-2: #454b54;
+  --muted: #787e88;
+  --line: #e3dfd4;
+  --line-strong: #cfc9ba;
+
+  --accent: #bc5327;
+  --accent-strong: #a34620;
+  --accent-soft: #f7e3d8;
+  --accent-soft2: #f0d5c5;
+  --accent-ink: #fff7f1;
+  --accent-deep: #9a431e;
+
+  --ok: #217a55;
+  --ok-soft: #deede5;
+  --warn: #96660f;
+  --warn-soft: #f3e8cf;
+  --danger: #b23b33;
+  --danger-strong: #9a302a;
+  --danger-soft: #f5e0de;
+  --danger-soft2: #eed2cf;
+}
+
+.dark {
+  --bg: #101216;
+  --surface: #171a20;
+  --surface-2: #1f232b;
+  --ink: #eceae3;
+  --ink-2: #c2c0b8;
+  --muted: #898e98;
+  --line: #262b34;
+  --line-strong: #3a414d;
+
+  --accent: #d96f3c;
+  --accent-strong: #e5814f;
+  --accent-soft: #2e211a;
+  --accent-soft2: #3c2b21;
+  --accent-ink: #201007;
+  --accent-deep: #e8956a;
+
+  --ok: #4ca97f;
+  --ok-soft: #1c2b23;
+  --warn: #d9a344;
+  --warn-soft: #2e2718;
+  --danger: #e06b62;
+  --danger-strong: #e87f77;
+  --danger-soft: #33201f;
+  --danger-soft2: #402826;
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft2: var(--accent-soft2);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-deep: var(--accent-deep);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft2: var(--danger-soft2);
+
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-disp);
+  --font-fraunces: var(--font-ser);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* AI shimmer for generating states */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.ai-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--accent-soft) 40%,
+    var(--surface-2) 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Dotted grid backdrop for the hero */
+.dot-grid {
+  background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dark .dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+/* ---------- Print: exact A4 output ---------- */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  .print-sheet-wrap {
+    position: absolute;
+    inset: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .print-sheet {
+    width: 210mm !important;
+    min-height: 296mm !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+}
