@@ -1,0 +1,477 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asqarov Javohirbek — Resume</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.45;
+      font-size: 13px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .resume-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+
+    /* HEADER */
+    .header {
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-left h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .header-left .title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 5px 16px;
+      font-size: 11.5px;
+      color: #475569;
+      text-align: right;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .contact-item a {
+      color: #0f172a;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .contact-item a:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+    /* SECTIONS */
+    .section {
+      margin-bottom: 13px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 12px;
+      background: #3b82f6;
+      border-radius: 2px;
+    }
+
+    /* SUMMARY */
+    .summary-text {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.5;
+      text-align: justify;
+    }
+
+    /* SKILLS GRID */
+    .skills-category-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4.5px;
+    }
+
+    .skill-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      font-size: 11.5px;
+      line-height: 1.35;
+    }
+
+    .skill-label {
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .skill-values {
+      color: #475569;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 11px;
+      border: 1px solid #e2e8f0;
+      margin: 1px 2px;
+    }
+
+    /* EXPERIENCE & PROJECTS */
+    .item {
+      margin-bottom: 9px;
+      page-break-inside: avoid;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 2px;
+    }
+
+    .item-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .item-subtitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2563eb;
+    }
+
+    .item-date {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    .item-tech {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 3px;
+      font-style: italic;
+    }
+
+    ul.item-bullets {
+      list-style-type: none;
+      padding-left: 0;
+      margin-top: 3px;
+    }
+
+    ul.item-bullets li {
+      position: relative;
+      padding-left: 14px;
+      font-size: 11.5px;
+      color: #334155;
+      line-height: 1.45;
+      margin-bottom: 2.5px;
+    }
+
+    ul.item-bullets li::before {
+      content: "▪";
+      position: absolute;
+      left: 2px;
+      color: #3b82f6;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    /* TWO COLUMN LAYOUT FOR BOTTOM */
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .lang-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      padding: 2px 0;
+      border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .lang-name {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .lang-level {
+      color: #64748b;
+      font-size: 11px;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .resume-container {
+        width: 100%;
+        max-width: 100%;
+      }
+      a {
+        text-decoration: none !important;
+        color: #0f172a !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="resume-container">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <h1>Asqarov Javohirbek</h1>
+      <div class="title">Middle Full-Stack Engineer & AI Product Developer</div>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <span>📍 Toshkent, O'zbekiston</span>
+      </div>
+      <div class="contact-item">
+        <a href="tel:+998905083302">📞 +998 (90) 508-33-02</a>
+      </div>
+      <div class="contact-item">
+        <a href="mailto:salomh46@gmail.com">✉️ salomh46@gmail.com</a>
+      </div>
+      <div class="contact-item">
+        <a href="https://t.me/Dr_eviluz" target="_blank">✈️ @Dr_eviluz</a>
+      </div>
+      <div class="contact-item">
+        <a href="https://github.com/salomh46-rgb" target="_blank">🐙 github.com/salomh46-rgb</a>
+      </div>
+      <div class="contact-item">
+        <a href="https://bestportfoliyo-o4z2.vercel.app/" target="_blank">🌐 bestportfoliyo-o4z2.vercel.app</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- SUMMARY -->
+  <section class="section">
+    <div class="section-title">Professional Xulosa (Summary)</div>
+    <p class="summary-text">
+      Zamonaviy veb-platformalar, SaaS tizimlari, generativ AI (LLM) integratsiyalari va avtomatlashtirilgan backend servislarini qurish bo'yicha kuchli amaliy tajribaga ega <strong>Middle Full-Stack dasturchi</strong>. <strong>Python (FastAPI, aiohttp), TypeScript, React / Next.js</strong> va relyatsion ma'lumotlar bazalari (PostgreSQL, SQLite) arxitekturasida chuqur bilimga ega. LLM (OpenAI, Gemini), RAG va avtonom agentlarni real biznes jarayonlariga tatbiq qilish, mikroxizmatlar xavfsizligini ta'minlash hamda to'lov tizimlarini (Stripe, Payme, Click) integratsiya qilishga ixtisoslashgan.
+    </p>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="section">
+    <div class="section-title">Texnik Ko'nikmalar (Technical Skills)</div>
+    <div class="skills-category-list">
+      <div class="skill-row">
+        <div class="skill-label">Dasturlash Tillari:</div>
+        <div class="skill-values">
+          <span class="badge">Python</span>
+          <span class="badge">TypeScript</span>
+          <span class="badge">JavaScript (ES6+)</span>
+          <span class="badge">SQL</span>
+          <span class="badge">HTML5 / CSS3</span>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-label">Frontend & UI:</div>
+        <div class="skill-values">
+          <span class="badge">React.js</span>
+          <span class="badge">Next.js (App Router)</span>
+          <span class="badge">Tailwind CSS (v4)</span>
+          <span class="badge">Chart.js</span>
+          <span class="badge">Responsive Design</span>
+          <span class="badge">SPA / SSR</span>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-label">Backend & API:</div>
+        <div class="skill-values">
+          <span class="badge">FastAPI</span>
+          <span class="badge">Node.js / Express</span>
+          <span class="badge">SQLAlchemy</span>
+          <span class="badge">Drizzle ORM</span>
+          <span class="badge">aiohttp</span>
+          <span class="badge">aiogram 3.x</span>
+          <span class="badge">RESTful APIs</span>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-label">AI & Avtomatlashtirish:</div>
+        <div class="skill-values">
+          <span class="badge">OpenAI API</span>
+          <span class="badge">Google Gemini API</span>
+          <span class="badge">RAG</span>
+          <span class="badge">LangChain</span>
+          <span class="badge">Prompt Engineering</span>
+          <span class="badge">n8n</span>
+          <span class="badge">AI Bots</span>
+        </div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-label">DevOps, DB & Xavfsizlik:</div>
+        <div class="skill-values">
+          <span class="badge">PostgreSQL</span>
+          <span class="badge">SQLite</span>
+          <span class="badge">Git / GitHub</span>
+          <span class="badge">Vercel</span>
+          <span class="badge">Render</span>
+          <span class="badge">OAuth 2.0</span>
+          <span class="badge">Rate Limiting</span>
+          <span class="badge">Stripe / Payme / Click</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section class="section">
+    <div class="section-title">Ish Tajribasi (Work Experience)</div>
+    
+    <div class="item">
+      <div class="item-header">
+        <div>
+          <span class="item-title">TechCorp Innovatsiya Markazi</span> — <span class="item-subtitle">Middle Full-Stack Engineer / AI Integrator</span>
+        </div>
+        <span class="item-date">2024 – Hozirgacha</span>
+      </div>
+      <ul class="item-bullets">
+        <li>Biznes mijozlar va foydalanuvchilar o'rtasidagi aloqani 24/7 avtomatlashtiruvchi LLM asosidagi intellektual chat tizimlari va backend API'larini loyihalash.</li>
+        <li>Next.js va Tailwind CSS asosida konversiyani 35% ga oshirgan zamonaviy, sezgir va qulay foydalanuvchi interfeyslarini yaratish.</li>
+        <li>PostgreSQL va FastAPI yordamida yuqori yuklamali mikroxizmatlar va ma'lumotlar almashinuvi kanallarini optimallashtirish.</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-header">
+        <div>
+          <span class="item-title">SoftSolutions IT Kompaniyasi</span> — <span class="item-subtitle">Full-Stack Dasturchi</span>
+        </div>
+        <span class="item-date">2023 – 2024</span>
+      </div>
+      <ul class="item-bullets">
+        <li>Korporativ veb-ilovalarning frontend va backend qismlarini ishlab chiqish, tashqi API integratsiyalarini amalga oshirish.</li>
+        <li>Autentifikatsiya (OAuth 2.0, JWT, httpOnly sessions) va foydalanuvchi ma'lumotlari xavfsizligini ta'minlovchi mexanizmlarni joriy etish.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="section">
+    <div class="section-title">Asosiy Loyihalar (Key Projects & Open Source)</div>
+
+    <div class="item">
+      <div class="item-header">
+        <span class="item-title">ResumAI Hub — AI Resume & Cover Letter SaaS Platform</span>
+        <span class="item-date"><a href="https://github.com/salomh46-rgb/rezyume-ai_creater" target="_blank" style="color:#2563eb; font-weight:600; text-decoration:none;">GitHub ↗</a></span>
+      </div>
+      <div class="item-tech">Stack: Next.js (App Router), React, TypeScript, Tailwind CSS v4, PostgreSQL, Drizzle ORM, OpenAI API, Stripe, Payme, Click</div>
+      <ul class="item-bullets">
+        <li>Foydalanuvchilarga professional rezyume va muqova xatlari yaratish imkonini beruvchi to'liq AI SaaS arxitekturasi ishlab chiqildi.</li>
+        <li>ATS (Applicant Tracking System) reyting tahlili, real vaqtda split-screen muharriri va vektorli A4 PDF eksport moduli qurildi.</li>
+        <li>Xalqaro va milliy to'lov tizimlari (Stripe, Payme, Click) hamda Google OAuth sessiyalari xavfsizligi ta'minlandi.</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-header">
+        <span class="item-title">Javohirbek AI — 24/7 Telegram Business Assistant</span>
+        <span class="item-date"><a href="https://github.com/salomh46-rgb/telegram-business-bot" target="_blank" style="color:#2563eb; font-weight:600; text-decoration:none;">GitHub ↗</a></span>
+      </div>
+      <div class="item-tech">Stack: Python, aiogram 3.x, aiohttp, AsyncOpenAI, Google Gemini API, Render.com, UptimeRobot</div>
+      <ul class="item-bullets">
+        <li>Telegram Business orqali kiruvchi shaxsiy murojaatlarga insondek professional va kontekstli javob beruvchi avtonom AI-bot tizimi yaratildi.</li>
+        <li>Sliding-window flood himoyasi, 12 qadamlik suhbat xotirasi (context window) va provayder-agnostik (Gemini/OpenAI) arxitektura qurildi.</li>
+        <li>Render bepul tarifida 99.9% uptime bilan uzluksiz ishlash uchun maxsus /health monitoring mexanizmi ishlab chiqildi.</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-header">
+        <span class="item-title">Full-Stack API Explorer & Database Manager</span>
+        <span class="item-date"><a href="https://github.com/salomh46-rgb/Full-Stack-API-Explorer" target="_blank" style="color:#2563eb; font-weight:600; text-decoration:none;">GitHub ↗</a></span>
+      </div>
+      <div class="item-tech">Stack: Python, FastAPI, SQLAlchemy ORM, SQLite, JavaScript (ES6), Modern CSS</div>
+      <ul class="item-bullets">
+        <li>Loyiha va ma'lumotlar bilan tezkor ishlash imkonini beruvchi toza arxitekturali RESTful API va interaktiv frontend tizimi.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- EDUCATION & LANGUAGES -->
+  <div class="grid-2col section">
+    <div>
+      <div class="section-title">Ta'lim & Sertifikatlar</div>
+      <div class="item">
+        <div class="item-title">Axborot Texnologiyalari & Dasturiy Muhandislik</div>
+        <div class="item-subtitle">Oliy Ta'lim / Amaliy IT Dasturi</div>
+        <div class="item-date">Toshkent, O'zbekiston</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">Tillar (Languages)</div>
+      <div class="lang-item">
+        <span class="lang-name">O'zbek tili</span>
+        <span class="lang-level">Ona tili (Native)</span>
+      </div>
+      <div class="lang-item">
+        <span class="lang-name">Ingliz tili</span>
+        <span class="lang-level">Professional / Texnik (B2)</span>
+      </div>
+      <div class="lang-item">
+        <span class="lang-name">Rus tili</span>
+        <span class="lang-level">Erkin muloqot (Professional)</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
