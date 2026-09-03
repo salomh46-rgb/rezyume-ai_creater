@@ -1,0 +1,17 @@
+﻿{
+  "name": "Davomat Pro — O'qituvchi Yordamchisi",
+  "short_name": "Davomat Pro",
+  "description": "2-11 sinflar uchun tezkor davomat va Kundalik.com yordamchisi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23059669'/><path d='M30 50 L45 65 L72 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
