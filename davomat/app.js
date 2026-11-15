@@ -1131,7 +1131,8 @@ class DavomatApp {
       return;
     }
 
-    const wb = XLSX.utils.book_new();
+    try {
+      const wb = XLSX.utils.book_new();
 
     this.state.classes.forEach(cls => {
       const rows = [];
@@ -1156,18 +1157,41 @@ class DavomatApp {
       XLSX.utils.book_append_sheet(wb, ws, cls.name.replace(/[^a-zA-Z0-9]/g, '_'));
     });
 
-    XLSX.writeFile(wb, `Davomat_Hisoboti_${this.getTodayDateString()}.xlsx`);
-    this.showToast('Excel fayl yuklab olindi! 📊');
+      // Robust Blob download for desktop, mobile & PWA
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      this.triggerDownload(blob, `Davomat_Hisoboti_${this.getTodayDateString()}.xlsx`);
+      this.showToast('Excel fayl yuklab olindi! 📊');
+    } catch (err) {
+      console.error('Excel export error:', err);
+      try {
+        XLSX.writeFile(wb, `Davomat_Hisoboti_${this.getTodayDateString()}.xlsx`);
+      } catch (e2) {
+        alert('Excel yuklab olishda xatolik: ' + err.message);
+      }
+    }
+  }
+
+  triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 500);
   }
 
   downloadBackupJSON() {
     this.state.lastBackupDate = new Date().toISOString();
     this.saveState();
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state, null, 2));
-    const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `davomat_pro_backup_${this.getTodayDateString()}.json`);
-    dlAnchorElem.click();
+    const jsonStr = JSON.stringify(this.state, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    this.triggerDownload(blob, `davomat_pro_backup_${this.getTodayDateString()}.json`);
     this.showToast('Zaxira fayli yuklandi! 💾');
   }
 

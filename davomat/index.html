@@ -10,6 +10,11 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
   <script src="./xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
 </head>
 <body>
 
