@@ -1,11 +1,11 @@
-const CACHE_NAME = 'davomat-pro-v1';
+const CACHE_NAME = 'davomat-pro-v2';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  './xlsx.full.min.js'
 ];
 
 self.addEventListener('install', event => {

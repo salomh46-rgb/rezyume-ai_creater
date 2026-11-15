@@ -1,5 +1,6 @@
 /**
  * Davomat Pro - Core Application Logic
+ * Featuring: Dual Attendance Mode (Real Internal vs Kundalik.com Official Safe Filter)
  */
 
 // --- 1. LOCALIZATION DICTIONARY (UZ & RU) ---
@@ -40,8 +41,8 @@ const I18N = {
     bulk_input_placeholder: "Aliyev Ali\nKarimova Madina\nValiyev Sardor",
     student_name_label: "O'quvchi F.I.SH:",
     student_name_placeholder: "Aliyev Ali",
-    kundalik_title: "🌙 Kundalik.com (eMaktab) Yordamchisi",
-    kundalik_desc: "Kechqurun Kundalik.com ga kiritish uchun qisqa va qulay ro'yxat:",
+    kundalik_title: "🌙 Kundalik.com (eMaktab) Kiritish Yordamchisi",
+    kundalik_desc: "Haqiqiy davomatdan Kundalik.com uchun xavfsiz (1-2 ta yo'q qilib) kiritish:",
     copy_report: "Nusxalash 📋",
     copied_toast: "Nusxalandi! Kundalik.com yoki Telegramga joylashingiz mumkin.",
     all_present_badge: "Barchasi darsda 🎉",
@@ -53,6 +54,7 @@ const I18N = {
     toast_saved: "Muvaffaqiyatli saqlandi!",
     confirm_delete_class: "Haqiqatan ham bu sinfni va uning barcha davomatini o'chirmoqchimisiz?",
     confirm_delete_student: "O'quvchini o'chirishni tasdiqlaysizmi?",
+    search_placeholder: "O'quvchi ismini qidirish..."
   },
   ru: {
     app_title: "Давомат Про",
@@ -90,8 +92,8 @@ const I18N = {
     bulk_input_placeholder: "Алиев Али\nКаримова Мадина\nВалиев Сардор",
     student_name_label: "Ф.И.О. ученика:",
     student_name_placeholder: "Алиев Али",
-    kundalik_title: "🌙 Помощник для Kundalik.com (eMaktab)",
-    kundalik_desc: "Готовый краткий список отсутствующих для быстрого ввода в Kundalik:",
+    kundalik_title: "🌙 Помощник для ввода в Kundalik.com",
+    kundalik_desc: "Умное распределение для Kundalik.com (лимит 1-2 НБ для отчета):",
     copy_report: "Копировать 📋",
     copied_toast: "Скопировано! Можно вставить в Kundalik или Telegram.",
     all_present_badge: "Все на уроке 🎉",
@@ -103,6 +105,7 @@ const I18N = {
     toast_saved: "Успешно сохранено!",
     confirm_delete_class: "Вы уверены, что хотите удалить этот класс и всю его историю?",
     confirm_delete_student: "Удалить этого ученика?",
+    search_placeholder: "Поиск ученика по имени..."
   }
 };
 
@@ -170,8 +173,63 @@ const DEFAULT_DATA = {
       ]
     }
   ],
-  records: {}
+  records: {},
+  // Stores Kundalik filter overrides: { "YYYY-MM-DD": { "classId": ["studentId1", "studentId2"] } }
+  kundalikSelections: {}
 };
+
+// --- 2.5 INDEXEDDB DISASTER RECOVERY SHIELD ---
+const IDB_NAME = 'DavomatProShieldDB';
+const IDB_STORE = 'app_state';
+
+function initIndexedDB() {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !window.indexedDB) return resolve(null);
+    try {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+function saveToIndexedDB(state) {
+  initIndexedDB().then(db => {
+    if (!db) return;
+    try {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      store.put({ id: 'davomat_pro_backup', data: state, updatedAt: new Date().toISOString() });
+    } catch (e) {
+      console.warn('IDB save error', e);
+    }
+  });
+}
+
+function loadFromIndexedDB() {
+  return new Promise((resolve) => {
+    initIndexedDB().then(db => {
+      if (!db) return resolve(null);
+      try {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const store = tx.objectStore(IDB_STORE);
+        const req = store.get('davomat_pro_backup');
+        req.onsuccess = () => resolve(req.result ? req.result.data : null);
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  });
+}
 
 // --- 3. APP STATE MANAGEMENT ---
 class DavomatApp {
@@ -179,17 +237,49 @@ class DavomatApp {
     this.state = this.loadState();
     this.selectedDate = this.getTodayDateString();
     this.activeTab = 'attendance';
+    this.searchQuery = '';
     
     this.initElements();
     this.bindEvents();
+    this.initPersistentStorageAndRecovery();
     this.render();
+  }
+
+  async initPersistentStorageAndRecovery() {
+    // 1. Request browser Persistent Storage (protects against automatic browser storage eviction)
+    if (navigator.storage && navigator.storage.persist) {
+      try {
+        const isPersisted = await navigator.storage.persisted();
+        if (!isPersisted) {
+          await navigator.storage.persist();
+        }
+      } catch (e) {}
+    }
+
+    // 2. Disaster recovery: if localStorage was cleared/empty, auto-recover from IndexedDB mirror
+    try {
+      const hasLocalData = localStorage.getItem('davomat_pro_data');
+      if (!hasLocalData) {
+        const idbData = await loadFromIndexedDB();
+        if (idbData && idbData.classes && idbData.classes.length > 0) {
+          this.state = idbData;
+          this.saveState();
+          this.render();
+          this.showToast('🛡️ Ma\'lumotlar xavfsiz zaxiradan (IndexedDB) avtomatik tiklandi!');
+        }
+      } else {
+        saveToIndexedDB(this.state);
+      }
+    } catch (e) {}
   }
 
   loadState() {
     try {
       const saved = localStorage.getItem('davomat_pro_data');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (!parsed.kundalikSelections) parsed.kundalikSelections = {};
+        return parsed;
       }
     } catch (e) {
       console.error('Failed to load state', e);
@@ -200,9 +290,17 @@ class DavomatApp {
   saveState() {
     try {
       localStorage.setItem('davomat_pro_data', JSON.stringify(this.state));
+      saveToIndexedDB(this.state);
     } catch (e) {
       console.error('Failed to save state', e);
     }
+  }
+
+  shouldShowBackupAlert() {
+    if (!this.state.lastBackupDate) return true;
+    const lastDate = new Date(this.state.lastBackupDate);
+    const diffDays = (new Date() - lastDate) / (1000 * 60 * 60 * 24);
+    return diffDays >= 7;
   }
 
   t(key) {
@@ -546,7 +644,25 @@ class DavomatApp {
       else if (status === 'late') lateCount++;
     });
 
+    let filteredStudents = currentClass.students;
+    if (this.searchQuery) {
+      const q = this.searchQuery.toLowerCase();
+      filteredStudents = currentClass.students.filter(s => s.name.toLowerCase().includes(q));
+    }
+
+    const backupAlertHtml = this.shouldShowBackupAlert() ? `
+      <div class="backup-alert-banner" id="backupAlertBanner">
+        <div class="backup-alert-text">
+          <span>💡</span>
+          <span><strong>Haftalik zaxira:</strong> Ma'lumotlarni yo'qotmaslik uchun zaxira faylini saqlab qo'yish tavsiya etiladi.</span>
+        </div>
+        <button type="button" class="btn-backup-now" id="btnQuickBackupNow">📥 Zaxirani olish</button>
+      </div>
+    ` : '';
+
     let html = `
+      ${backupAlertHtml}
+      <!-- Stats & Quick Fill Banner -->
       <div class="stats-banner">
         <div class="stats-group">
           <div class="stat-item">
@@ -554,11 +670,11 @@ class DavomatApp {
             <span class="stat-val">${currentClass.students.length}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">${this.t('present_count')}</span>
+            <span class="stat-label">Haqiqiy Bor</span>
             <span class="stat-val present">${presentCount}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">${this.t('absent_count')}</span>
+            <span class="stat-label">Haqiqiy Yo'q</span>
             <span class="stat-val absent">${absentCount}</span>
           </div>
           ${excusedCount > 0 ? `
@@ -574,10 +690,16 @@ class DavomatApp {
         </div>
       </div>
 
+      <!-- Quick Search Input -->
+      <div style="margin-bottom:12px;">
+        <input type="text" id="studentSearchInput" class="form-control" placeholder="${this.t('search_placeholder')}" value="${this.searchQuery}" style="padding:8px 14px; font-size:13.5px; border-radius:9999px;">
+      </div>
+
+      <!-- Students List -->
       <div class="student-list">
     `;
 
-    currentClass.students.forEach((s, idx) => {
+    filteredStudents.forEach((s, idx) => {
       const status = this.getStudentStatus(s.id);
       let statusText = this.t('status_present');
       let statusIcon = '🟢';
@@ -604,6 +726,13 @@ class DavomatApp {
     html += `</div>`;
     this.contentEl.innerHTML = html;
 
+    // Search input listener
+    const sInput = document.getElementById('studentSearchInput');
+    sInput.addEventListener('input', (e) => {
+      this.searchQuery = e.target.value;
+      this.renderAttendanceViewOnly();
+    });
+
     this.contentEl.querySelectorAll('.student-card').forEach(card => {
       card.addEventListener('click', () => {
         const studentId = card.dataset.studentId;
@@ -614,67 +743,136 @@ class DavomatApp {
     document.getElementById('btnSetAllPresent').addEventListener('click', () => {
       this.setAllPresent();
     });
+
+    const btnQuickBackup = document.getElementById('btnQuickBackupNow');
+    if (btnQuickBackup) {
+      btnQuickBackup.addEventListener('click', () => {
+        this.downloadBackupJSON();
+        this.render();
+      });
+    }
   }
 
+  renderAttendanceViewOnly() {
+    this.renderAttendanceView();
+    const sInput = document.getElementById('studentSearchInput');
+    if (sInput) {
+      sInput.focus();
+      sInput.setSelectionRange(sInput.value.length, sInput.value.length);
+    }
+  }
+
+  // --- KUNDALIK.COM DUAL-MODE / SAFE FILTER VIEW ---
   renderKundalikView() {
     let html = `
-      <div style="margin-bottom:14px;">
-        <h2 style="font-size:17px; font-weight:800; color:#0f172a; margin-bottom:4px;">${this.t('kundalik_title')}</h2>
-        <p style="font-size:12.5px; color:#64748b;">${this.t('kundalik_desc')} <strong>(${this.selectedDate})</strong></p>
+      <div style="margin-bottom:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 16px;">
+        <h2 style="font-size:16px; font-weight:800; color:#166534; margin-bottom:4px;">${this.t('kundalik_title')}</h2>
+        <p style="font-size:12.5px; color:#15803d; line-height:1.4;">
+          Siz kiritgan <strong>haqiqiy davomat</strong> xavfsiz saqlanadi. Kundalik.com da muammo bo'lmasligi uchun pastdagi ro'yxatdan <strong>faqat 1 yoki 2 ta o'quvchini</strong> rasmiy kiritish uchun tanlab oling:
+        </p>
       </div>
     `;
 
-    let totalAbsentAllClasses = 0;
-    let fullReportText = `📋 DAVOMAT HISOBOTI (${this.selectedDate}):\n\n`;
+    let totalClassesWithAbsents = 0;
+    let fullKundalikReport = `📋 KUNDALIK.COM UCHUN RASMIY DAVOMAT (${this.selectedDate}):\n\n`;
 
     this.state.classes.forEach(cls => {
-      const absentStudents = [];
-      const excusedStudents = [];
-      const lateStudents = [];
-
+      // Find all actually absent or excused students
+      const realAbsents = [];
       cls.students.forEach(s => {
         const st = this.getStudentStatus(s.id, cls.id);
-        if (st === 'absent') absentStudents.push(s.name);
-        else if (st === 'excused') excusedStudents.push(s.name);
-        else if (st === 'late') lateStudents.push(s.name);
+        if (st === 'absent' || st === 'excused' || st === 'late') {
+          realAbsents.push({ id: s.id, name: s.name, status: st });
+        }
       });
 
-      const totalNotFull = absentStudents.length + excusedStudents.length + lateStudents.length;
-      totalAbsentAllClasses += totalNotFull;
-
-      let classReportSnippet = `🔹 ${cls.name} sinf: `;
-      if (totalNotFull === 0) {
-        classReportSnippet += `Barcha o'quvchilar darsda (${cls.students.length} ta)\n`;
-      } else {
-        const details = [];
-        if (absentStudents.length > 0) details.push(`Yo'q: ${absentStudents.join(', ')}`);
-        if (excusedStudents.length > 0) details.push(`Sababli: ${excusedStudents.join(', ')}`);
-        if (lateStudents.length > 0) details.push(`Kechikkan: ${lateStudents.join(', ')}`);
-        classReportSnippet += `${details.join(' | ')}\n`;
+      // Selected for Kundalik.com
+      if (!this.state.kundalikSelections[this.selectedDate]) {
+        this.state.kundalikSelections[this.selectedDate] = {};
       }
-      fullReportText += classReportSnippet;
+      let selectedIds = this.state.kundalikSelections[this.selectedDate][cls.id];
+      if (!selectedIds) {
+        // Default: take max 2 students automatically for safe Kundalik reporting
+        selectedIds = realAbsents.slice(0, 2).map(s => s.id);
+        this.state.kundalikSelections[this.selectedDate][cls.id] = selectedIds;
+      }
+
+      const officiallyAbsent = realAbsents.filter(s => selectedIds.includes(s.id));
+      const officiallyPresentCount = cls.students.length - officiallyAbsent.length;
+
+      let kundalikSnippet = `🔹 ${cls.name} sinf: Jami ${cls.students.length} ta — ${officiallyPresentCount} ta BOR`;
+      if (officiallyAbsent.length > 0) {
+        kundalikSnippet += `, ${officiallyAbsent.length} ta YO'Q (${officiallyAbsent.map(s => s.name).join(', ')})\n`;
+      } else {
+        kundalikSnippet += ` (Barchasi to'liq bor)\n`;
+      }
+      fullKundalikReport += kundalikSnippet;
 
       html += `
-        <div class="kundalik-card">
+        <div class="kundalik-card" style="border: 1.5px solid ${realAbsents.length > 0 ? '#cbd5e1' : '#e2e8f0'};">
           <div class="kundalik-header">
-            <span class="kundalik-title">${cls.name} sinf (${cls.students.length} o'quvchi)</span>
-            ${totalNotFull === 0 ? `
-              <span class="absent-badge all-present">${this.t('all_present_badge')}</span>
-            ` : `
-              <span class="absent-badge has-absent">${totalNotFull} ${this.t('absent_students_count')}</span>
-            `}
-          </div>
-          
-          ${totalNotFull > 0 ? `
-            <div class="absent-names-list">
-              ${absentStudents.length > 0 ? `<div><strong>🔴 Yo'q (НБ):</strong> ${absentStudents.map((n, i) => `${i+1}. ${n}`).join(', ')}</div>` : ''}
-              ${excusedStudents.length > 0 ? `<div style="margin-top:4px;"><strong>🟡 Sababli (СБ):</strong> ${excusedStudents.map((n, i) => `${i+1}. ${n}`).join(', ')}</div>` : ''}
-              ${lateStudents.length > 0 ? `<div style="margin-top:4px;"><strong>🔵 Kechikkan (К):</strong> ${lateStudents.map((n, i) => `${i+1}. ${n}`).join(', ')}</div>` : ''}
+            <div>
+              <span class="kundalik-title">${cls.name} sinf</span>
+              <span style="font-size:12px; color:#64748b; margin-left:6px;">(Jami: ${cls.students.length})</span>
             </div>
-          ` : ''}
+            <div>
+              <span class="absent-badge" style="background:#f1f5f9; color:#334155; margin-right:4px;">
+                Haqiqiy yo'q: ${realAbsents.length} ta
+              </span>
+              <span class="absent-badge ${officiallyAbsent.length > 0 ? 'has-absent' : 'all-present'}">
+                Kundalik.com: ${officiallyAbsent.length} ta NB
+              </span>
+            </div>
+          </div>
+      `;
 
-          <div style="display:flex; justify-content:flex-end;">
-            <button class="copy-btn copy-single-class-btn" data-text="${encodeURIComponent(classReportSnippet)}">
+      if (realAbsents.length > 0) {
+        html += `
+          <div style="background:#f8fafc; border-radius:8px; padding:10px 12px; margin:10px 0; border:1px solid #e2e8f0;">
+            <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">
+              Qaysi o'quvchilarni Kundalik.com ga "Yo'q" deb kiritasiz? (Belgilang):
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+        `;
+
+        realAbsents.forEach(s => {
+          const isChecked = selectedIds.includes(s.id) ? 'checked' : '';
+          const badgeText = s.status === 'absent' ? 'НБ (Yo\'q)' : (s.status === 'excused' ? 'СБ (Sababli)' : 'К (Kechikkan)');
+          html += `
+            <label style="display:flex; align-items:center; justify-content:space-between; background:#ffffff; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0; cursor:pointer;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" class="kundalik-checkbox" data-class-id="${cls.id}" data-student-id="${s.id}" ${isChecked} style="width:16px; height:16px; accent-color:#059669;">
+                <span style="font-size:13.5px; font-weight:600; color:#0f172a;">${s.name}</span>
+              </div>
+              <span style="font-size:11px; font-weight:700; color:${s.status === 'absent' ? '#e11d48' : '#d97706'};">${badgeText}</span>
+            </label>
+          `;
+        });
+
+        html += `
+            </div>
+            <!-- Quick preset buttons -->
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn-sm preset-btn" data-class-id="${cls.id}" data-count="1" style="background:#ffffff; border:1px solid #cbd5e1; font-size:11px;">Faqat 1 ta tanlash</button>
+              <button class="btn-sm preset-btn" data-class-id="${cls.id}" data-count="2" style="background:#ffffff; border:1px solid #cbd5e1; font-size:11px;">Faqat 2 ta tanlash</button>
+              <button class="btn-sm preset-btn" data-class-id="${cls.id}" data-count="0" style="background:#ffffff; border:1px solid #cbd5e1; font-size:11px;">Hamma keldi (0 ta NB)</button>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="background:#f0fdf4; color:#166534; padding:8px 12px; border-radius:6px; font-size:13px; font-weight:600; margin:8px 0;">
+            ✓ Barcha o'quvchilar to'liq darsda qatnashgan.
+          </div>
+        `;
+      }
+
+      html += `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <span style="font-size:12px; color:#64748b; font-weight:600;">
+              Kundalik: <strong>${officiallyPresentCount} kelgan, ${officiallyAbsent.length} kelmagan</strong>
+            </span>
+            <button class="copy-btn copy-single-class-btn" data-text="${encodeURIComponent(kundalikSnippet)}">
               ${this.t('copy_report')}
             </button>
           </div>
@@ -684,14 +882,61 @@ class DavomatApp {
 
     html += `
       <div style="margin-top:20px; text-align:center;">
-        <button class="btn-primary" id="btnCopyAllReport" style="width:100%; justify-content:center;">
-          📋 Barcha sinflar hisobotini nusxalash (Telegram / Kundalik)
+        <button class="btn-primary" id="btnCopyAllReport" style="width:100%; justify-content:center; padding:14px; font-size:15px;">
+          📋 Kundalik.com uchun barcha sinflarni nusxalash
         </button>
       </div>
     `;
 
     this.contentEl.innerHTML = html;
 
+    // Checkbox change handlers
+    document.querySelectorAll('.kundalik-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const classId = cb.dataset.classId;
+        const studentId = cb.dataset.studentId;
+        if (!this.state.kundalikSelections[this.selectedDate]) {
+          this.state.kundalikSelections[this.selectedDate] = {};
+        }
+        let arr = this.state.kundalikSelections[this.selectedDate][classId] || [];
+        if (cb.checked) {
+          if (!arr.includes(studentId)) arr.push(studentId);
+        } else {
+          arr = arr.filter(id => id !== studentId);
+        }
+        this.state.kundalikSelections[this.selectedDate][classId] = arr;
+        this.saveState();
+        this.renderKundalikView();
+      });
+    });
+
+    // Preset button handlers
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const classId = btn.dataset.classId;
+        const count = parseInt(btn.dataset.count, 10);
+        const cls = this.state.classes.find(c => c.id === classId);
+        if (!cls) return;
+
+        const realAbsents = [];
+        cls.students.forEach(s => {
+          const st = this.getStudentStatus(s.id, cls.id);
+          if (st === 'absent' || st === 'excused' || st === 'late') {
+            realAbsents.push(s.id);
+          }
+        });
+
+        if (!this.state.kundalikSelections[this.selectedDate]) {
+          this.state.kundalikSelections[this.selectedDate] = {};
+        }
+        this.state.kundalikSelections[this.selectedDate][classId] = realAbsents.slice(0, count);
+        this.saveState();
+        this.renderKundalikView();
+        this.showToast(this.t('toast_saved'));
+      });
+    });
+
+    // Copy handlers
     document.querySelectorAll('.copy-single-class-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const text = decodeURIComponent(btn.dataset.text);
@@ -702,12 +947,13 @@ class DavomatApp {
     });
 
     document.getElementById('btnCopyAllReport').addEventListener('click', () => {
-      navigator.clipboard.writeText(fullReportText).then(() => {
+      navigator.clipboard.writeText(fullKundalikReport).then(() => {
         this.showToast(this.t('copied_toast'));
       });
     });
   }
 
+  // --- CLASSES & STUDENTS MANAGEMENT VIEW ---
   renderClassesManagementView() {
     const currentClass = this.getCurrentClass();
     if (!currentClass) return;
@@ -787,6 +1033,7 @@ class DavomatApp {
     });
   }
 
+  // --- STATS & EXCEL EXPORT VIEW ---
   renderStatsView() {
     let totalClasses = this.state.classes.length;
     let totalStudents = this.state.classes.reduce((acc, c) => acc + c.students.length, 0);
@@ -823,11 +1070,14 @@ class DavomatApp {
           <p style="font-size:12px; color:#64748b; margin-bottom:12px;">
             Barcha ma'lumotlar telefoningiz xotirasida 1 yil davomida ishonchli saqlanadi. Xohlasangiz, fayl shaklida kompyuterga yoki boshqa telefonga ko'chirishingiz mumkin.
           </p>
-          <div style="display:flex; gap:8px;">
-            <button class="btn-secondary" id="btnDownloadBackup" style="flex:1;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-secondary" id="btnDownloadBackup" style="flex:1; min-width:140px;">
               📥 Zaxira yuklab olish
             </button>
-            <label class="btn-secondary" style="flex:1; text-align:center; cursor:pointer;">
+            <button class="btn-secondary" id="btnTelegramBackup" style="flex:1; min-width:140px; background:#f0fdf4; border-color:#86efac; color:#166534; font-weight:700;">
+              ✈️ Telegramga yuborish
+            </button>
+            <label class="btn-secondary" style="flex:1; min-width:140px; text-align:center; cursor:pointer;">
               📤 Zaxirani tiklash
               <input type="file" id="fileRestoreInput" accept=".json" style="display:none;">
             </label>
@@ -845,6 +1095,13 @@ class DavomatApp {
     document.getElementById('btnDownloadBackup').addEventListener('click', () => {
       this.downloadBackupJSON();
     });
+
+    const btnTg = document.getElementById('btnTelegramBackup');
+    if (btnTg) {
+      btnTg.addEventListener('click', () => {
+        this.shareBackupToTelegram();
+      });
+    }
 
     document.getElementById('fileRestoreInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -904,12 +1161,31 @@ class DavomatApp {
   }
 
   downloadBackupJSON() {
+    this.state.lastBackupDate = new Date().toISOString();
+    this.saveState();
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state, null, 2));
     const dlAnchorElem = document.createElement('a');
     dlAnchorElem.setAttribute("href", dataStr);
     dlAnchorElem.setAttribute("download", `davomat_pro_backup_${this.getTodayDateString()}.json`);
     dlAnchorElem.click();
-    this.showToast('Zaxira fayli yuklandi!');
+    this.showToast('Zaxira fayli yuklandi! 💾');
+  }
+
+  shareBackupToTelegram() {
+    this.state.lastBackupDate = new Date().toISOString();
+    this.saveState();
+    
+    let summaryText = `📊 Davomat Pro — Zaxira va Hisobot (${this.getTodayDateString()}):\n`;
+    summaryText += `Sinflar soni: ${this.state.classes.length} ta\n`;
+    this.state.classes.forEach(c => {
+      summaryText += `• ${c.name}: ${c.students.length} nafar o'quvchi\n`;
+    });
+    summaryText += `\nIlova: https://davomatpro.vercel.app`;
+    
+    this.downloadBackupJSON();
+    
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://davomatpro.vercel.app')}&text=${encodeURIComponent(summaryText)}`;
+    window.open(tgUrl, '_blank');
   }
 }
 
